@@ -2,7 +2,7 @@
  * Random Video Player for GitHub Pages
  * Features dual modes:
  *  1. Web Player: Watch directly inside the browser.
- *  2. Native Sorteador: Pick random videos & launch them in your PC's native player (VLC / Windows Media Player).
+ *  2. Native Sorteador: Pick random videos & launch them in your PC's native player (VLC / Windows Media Player) with 0 downloading!
  */
 
 (function () {
@@ -28,10 +28,10 @@
   const nativeFolderPath = document.getElementById('nativeFolderPath');
   const nativeFileName = document.getElementById('nativeFileName');
   const nativeFileSize = document.getElementById('nativeFileSize');
-  const btnOpenInPc = document.getElementById('btnOpenInPc');
-  const btnCopyPath = document.getElementById('btnCopyPath');
+  const baseFolderPathInput = document.getElementById('baseFolderPathInput');
+  const btnOpenVlc = document.getElementById('btnOpenVlc');
+  const btnOpenWinRun = document.getElementById('btnOpenWinRun');
   const btnNativeNext = document.getElementById('btnNativeNext');
-  const btnOpenCurrentInPc = document.getElementById('btnOpenCurrentInPc');
 
   // Video Metadata UI
   const videoCountBadge = document.getElementById('videoCountBadge');
@@ -88,9 +88,6 @@
 
   // Supported video extensions
   const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogv', '.mov', '.mkv', '.m4v', '.avi', '.ts', '.3gp', '.flv', '.vob', '.wmv'];
-  
-  // File size limit for WASM conversion (200MB)
-  const MAX_WASM_FILE_SIZE = 200 * 1024 * 1024;
 
   // Application State
   let videoFiles = [];
@@ -98,7 +95,7 @@
   let historyPointer = -1;
   let unplayedIndices = [];
 
-  let currentMode = 'web'; // 'web' or 'native'
+  let currentMode = 'web';
   let isShuffleNoRepeat = true;
   let isAutoNextEnabled = true;
   
@@ -109,18 +106,28 @@
   let errorSkipTimer = null;
   let idleTimer = null;
 
-  let ffmpegInstance = null;
-  let isConversionAttempted = false;
-
   // Init
   function init() {
+    loadSavedBasePath();
     bindEvents();
+  }
+
+  function loadSavedBasePath() {
+    const saved = localStorage.getItem('userBaseFolderPath');
+    if (saved) {
+      baseFolderPathInput.value = saved;
+    }
   }
 
   function bindEvents() {
     // Mode Switcher
     btnModeWeb.addEventListener('click', () => setAppMode('web'));
     btnModeNative.addEventListener('click', () => setAppMode('native'));
+
+    // Base Path Persistence
+    baseFolderPathInput.addEventListener('input', (e) => {
+      localStorage.setItem('userBaseFolderPath', e.target.value.trim());
+    });
 
     // Folder Inputs
     folderInput.addEventListener('change', handleFolderSelect);
@@ -134,10 +141,9 @@
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
     dropzone.addEventListener('drop', handleDrop);
 
-    // Native Picker Buttons
-    btnOpenInPc.addEventListener('click', () => openInNativePlayer(videoFiles[activeIndex]));
-    btnOpenCurrentInPc.addEventListener('click', () => openInNativePlayer(videoFiles[activeIndex]));
-    btnCopyPath.addEventListener('click', copyActiveFilePath);
+    // Native Launcher Buttons
+    btnOpenVlc.addEventListener('click', launchInVlcDirect);
+    btnOpenWinRun.addEventListener('click', copyWindowsRunCommand);
     btnNativeNext.addEventListener('click', () => playNextVideo(true));
 
     // Web Player Controls
@@ -190,7 +196,7 @@
   }
 
   /* ----------------------------------------------------
-   * App Mode Switcher (Web Player vs Sorteador Nativo)
+   * App Mode Switcher
    * ---------------------------------------------------- */
 
   function setAppMode(mode) {
@@ -331,14 +337,13 @@
   }
 
   /* ----------------------------------------------------
-   * Video Selection Logic (Random & Navigation)
+   * Video Selection Logic
    * ---------------------------------------------------- */
 
   function playNextVideo(forceNewRandom = false) {
     if (videoFiles.length === 0) return;
 
     clearTimeout(errorSkipTimer);
-    isConversionAttempted = false;
 
     if (!forceNewRandom && historyPointer >= 0 && historyPointer < playedHistory.length - 1) {
       historyPointer++;
@@ -372,7 +377,6 @@
 
   function playPrevVideo() {
     clearTimeout(errorSkipTimer);
-    isConversionAttempted = false;
 
     if (historyPointer > 0) {
       historyPointer--;
@@ -447,50 +451,65 @@
   }
 
   /* ----------------------------------------------------
-   * Native Desktop Player Trigger & Helpers
+   * Zero-Download Native Launchers (VLC protocol & Windows Run command)
    * ---------------------------------------------------- */
 
-  function openInNativePlayer(file) {
-    if (!file) return;
+  function getFullLocalWindowsPath(file) {
+    if (!file) return '';
+    let basePath = baseFolderPathInput.value.trim();
+    if (!basePath) {
+      basePath = 'C:\\SuaPasta';
+    }
+    // Remove trailing slash if present
+    basePath = basePath.replace(/[/\\]+$/, '');
 
-    const url = URL.createObjectURL(file);
-    
-    // Setting download attribute prevents Chrome from opening a new tab
-    // It triggers file handoff to OS / Default Desktop Player (VLC / Media Player)
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    showToast(`Abrindo ${file.name} no Player do PC...`);
+    const relPath = (file.webkitRelativePath || file.name).replace(/\//g, '\\');
+    return `${basePath}\\${relPath}`;
   }
 
-  function copyActiveFilePath() {
+  function launchInVlcDirect() {
     const file = videoFiles[activeIndex];
     if (!file) return;
-    const fullPath = file.webkitRelativePath || file.name;
+
+    const fullPath = getFullLocalWindowsPath(file);
+    if (!baseFolderPathInput.value.trim()) {
+      showToast('Digite a pasta base do seu PC no campo acima!');
+      baseFolderPathInput.focus();
+      return;
+    }
+
+    // Windows VLC protocol scheme: vlc://file:///C:/path/video.mp4
+    const formattedPath = fullPath.replace(/\\/g, '/');
+    const vlcUri = `vlc://file:///${encodeURI(formattedPath)}`;
+
+    window.location.href = vlcUri;
+    showToast(`Abrindo no VLC: ${file.name}`);
+  }
+
+  function copyWindowsRunCommand() {
+    const file = videoFiles[activeIndex];
+    if (!file) return;
+
+    const fullPath = getFullLocalWindowsPath(file);
+    const cmd = `start "" "${fullPath}"`;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(fullPath).then(() => {
-        showToast('Nome/Caminho copiado!');
-      }).catch(() => {
-        fallbackCopyTextToClipboard(fullPath);
-      });
+      navigator.clipboard.writeText(cmd).then(() => {
+        showToast('Comando copiado! Pressione Win+R e Ctrl+V');
+      }).catch(() => fallbackCopyText(cmd));
     } else {
-      fallbackCopyTextToClipboard(fullPath);
+      fallbackCopyText(cmd);
     }
   }
 
-  function fallbackCopyTextToClipboard(text) {
+  function fallbackCopyText(text) {
     const textArea = document.createElement('textarea');
     textArea.value = text;
     document.body.appendChild(textArea);
     textArea.select();
     try {
       document.execCommand('copy');
-      showToast('Nome/Caminho copiado!');
+      showToast('Comando copiado! Pressione Win+R e Ctrl+V');
     } catch (err) {
       showToast('Erro ao copiar.');
     }
@@ -498,103 +517,21 @@
   }
 
   /* ----------------------------------------------------
-   * Error Handling & FFmpeg Remuxing
+   * Web Player Error Handling
    * ---------------------------------------------------- */
 
-  async function getFFmpeg() {
-    if (ffmpegInstance) return ffmpegInstance;
-    if (window.FFmpeg && window.FFmpeg.createFFmpeg) {
-      ffmpegInstance = window.FFmpeg.createFFmpeg({
-        log: false,
-        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
-      });
-      await ffmpegInstance.load();
-      return ffmpegInstance;
-    }
-    return null;
-  }
-
-  async function handleVideoError(e) {
+  function handleVideoError(e) {
     const failedFile = videoFiles[activeIndex];
     if (!failedFile) return;
 
     const fileSizeMB = (failedFile.size / (1024 * 1024)).toFixed(1);
-    const isLargeFile = failedFile.size > MAX_WASM_FILE_SIZE;
-
     console.warn(`Native playback error for (${failedFile.name}, ${fileSizeMB} MB):`, mainVideo.error);
 
-    if (isLargeFile) {
-      showToast(`Vídeo grande (${fileSizeMB}MB). Clique em "Abrir no PC"!`);
-      clearTimeout(errorSkipTimer);
-      errorSkipTimer = setTimeout(() => {
-        playNextVideo(true);
-      }, 2000);
-      return;
-    }
-
-    if (!isConversionAttempted && window.FFmpeg) {
-      isConversionAttempted = true;
-      attemptFFmpegRemux(failedFile);
-    } else {
-      showToast(`Não foi possível ler (${failedFile.name}). Pulando...`);
-      clearTimeout(errorSkipTimer);
-      errorSkipTimer = setTimeout(() => {
-        playNextVideo(true);
-      }, 1500);
-    }
-  }
-
-  async function attemptFFmpegRemux(file) {
-    try {
-      showToast('Convertendo formato no navegador...');
-      const ffmpeg = await getFFmpeg();
-      
-      if (!ffmpeg) {
-        throw new Error('FFmpeg WASM não disponível.');
-      }
-
-      const { fetchFile } = window.FFmpeg;
-      const fileData = await fetchFile(file);
-      
-      const ext = file.name.split('.').pop().toLowerCase() || 'mkv';
-      const inName = `input.${ext}`;
-      const outName = 'converted.mp4';
-
-      ffmpeg.FS('writeFile', inName, fileData);
-
-      showToast('Remuxing rápido de áudio/vídeo...');
-      await ffmpeg.run('-i', inName, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', outName);
-
-      const outData = ffmpeg.FS('readFile', outName);
-      const convertedBlob = new Blob([outData.buffer], { type: 'video/mp4' });
-
-      try {
-        ffmpeg.FS('unlink', inName);
-        ffmpeg.FS('unlink', outName);
-      } catch (err) {}
-
-      if (activeObjectUrl) {
-        pendingRevokeUrls.push(activeObjectUrl);
-      }
-      activeObjectUrl = URL.createObjectURL(convertedBlob);
-
-      mainVideo.pause();
-      mainVideo.src = activeObjectUrl;
-      mainVideo.play().then(() => {
-        updatePlayPauseIcons(true);
-        showToast('Vídeo convertido e reproduzindo!');
-      }).catch((playErr) => {
-        console.error('Play error after conversion:', playErr);
-      });
-
-    } catch (err) {
-      console.error('FFmpeg remux failed:', err);
-      showToast('Não foi possível converter. Clique em "Abrir no PC"!');
-      clearTimeout(errorSkipTimer);
-      errorSkipTimer = setTimeout(() => {
-        playNextVideo(true);
-      }, 2000);
-    }
+    showToast(`Formato não suportado no navegador (${failedFile.name}). Pulando...`);
+    clearTimeout(errorSkipTimer);
+    errorSkipTimer = setTimeout(() => {
+      playNextVideo(true);
+    }, 1500);
   }
 
   /* ----------------------------------------------------

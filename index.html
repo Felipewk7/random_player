@@ -74,7 +74,7 @@
         </div>
       </section>
 
-      <!-- Modo Sorteador Nativo (Cartão para abrir no Player do PC / VLC) -->
+      <!-- Modo Sorteador Nativo (Cartão para abrir no Player do PC / VLC Sem Baixar) -->
       <section id="nativePickerStage" class="native-picker-stage hidden">
         <div class="picker-card">
           <div class="picker-header-badge">🎰 Vídeo Sorteado</div>
@@ -82,15 +82,22 @@
           <h2 class="picker-filename" id="nativeFileName">NomeDoVideo.mp4</h2>
           <span class="picker-filesize" id="nativeFileSize">0 MB</span>
 
+          <!-- Setup do Caminho Completo do PC (Salvo no navegador) -->
+          <div class="base-path-box">
+            <label for="baseFolderPathInput">Caminho da pasta no seu Windows (ex: C:\Users\Felifep\Videos):</label>
+            <input type="text" id="baseFolderPathInput" placeholder="C:\Caminho\Para\Sua\Pasta" value="">
+            <span class="base-path-tip">Cole o caminho da sua pasta uma única vez para abrir direto no VLC sem baixar nada!</span>
+          </div>
+
           <div class="picker-actions">
-            <button id="btnOpenInPc" class="btn btn-primary btn-lg" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
+            <button id="btnOpenVlc" class="btn btn-primary btn-lg" style="background: linear-gradient(135deg, #f97316, #ea580c); box-shadow: 0 4px 14px rgba(249, 115, 22, 0.4);">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              <span>Abrir no Player do PC (VLC / Windows)</span>
+              <span>Abrir no VLC (Sem Baixar)</span>
             </button>
 
-            <button id="btnCopyPath" class="btn btn-secondary btn-lg">
+            <button id="btnOpenWinRun" class="btn btn-secondary btn-lg">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              <span>Copiar Nome do Arquivo</span>
+              <span>Copiar Comando para Executar no Windows (Win + R)</span>
             </button>
 
             <button id="btnNativeNext" class="btn btn-secondary btn-lg btn-accent-glow">
@@ -121,9 +128,6 @@
               <h1 class="video-filename" id="videoFileName">Nome do Vídeo.mp4</h1>
             </div>
             <div class="video-info-right">
-              <button id="btnOpenCurrentInPc" class="btn btn-secondary btn-sm" title="Abrir este vídeo no VLC / Player do PC">
-                <span>Abrir no PC</span>
-              </button>
               <div class="video-index-badge" id="videoIndexBadge">0 / 0</div>
             </div>
           </div>
