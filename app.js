@@ -2,6 +2,8 @@
  * Random Video Player for GitHub Pages
  * Handles local recursive folder reading, random video queueing,
  * custom player controls (-5s/+5s, play/pause, next video), and shortcuts.
+ * 
+ * Optimized for Instant Playback & Zero-Lag Blob Streaming.
  */
 
 (function () {
@@ -54,7 +56,6 @@
   // Toast UI
   const toastNotification = document.getElementById('toastNotification');
   const toastText = document.getElementById('toastText');
-  const toastIcon = document.getElementById('toastIcon');
 
   // Drawer & Playlist UI
   const btnPlaylistToggle = document.getElementById('btnPlaylistToggle');
@@ -81,7 +82,12 @@
 
   let isShuffleNoRepeat = true;
   let isAutoNextEnabled = true;
+  
+  // Object URL Cache Management
   let activeObjectUrl = null;
+  let activeIndex = -1;
+  let pendingRevokeUrls = [];
+  let errorSkipTimer = null;
   let idleTimer = null;
 
   // Init
@@ -113,10 +119,13 @@
     btnNextVideo.addEventListener('click', () => playNextVideo(true));
     btnPrevVideo.addEventListener('click', playPrevVideo);
 
-    // Progress Bar
+    // Progress Bar & Video Events
     mainVideo.addEventListener('timeupdate', updateProgress);
     mainVideo.addEventListener('progress', updateBuffer);
     mainVideo.addEventListener('ended', handleVideoEnded);
+    mainVideo.addEventListener('loadeddata', handleVideoLoadedData);
+    mainVideo.addEventListener('error', handleVideoError);
+
     seekSlider.addEventListener('input', handleSeekInput);
     progressBarContainer.addEventListener('mousemove', handleSeekHover);
 
@@ -206,7 +215,6 @@
     return new Promise((resolve) => {
       if (entry.isFile) {
         entry.file((file) => {
-          // Attach custom relative path property if missing
           Object.defineProperty(file, 'webkitRelativePath', {
             value: path + file.name,
             writable: false
@@ -280,6 +288,9 @@
   function playNextVideo(forceNewRandom = false) {
     if (videoFiles.length === 0) return;
 
+    // Clear error auto-skip timer if user clicks next manually
+    clearTimeout(errorSkipTimer);
+
     // If navigating back in history and forward is requested
     if (!forceNewRandom && historyPointer >= 0 && historyPointer < playedHistory.length - 1) {
       historyPointer++;
@@ -292,7 +303,7 @@
     if (isShuffleNoRepeat) {
       if (unplayedIndices.length === 0) {
         resetUnplayedIndices(); // Reset stack if all played
-        showToast('Todos os vídeos foram reproduzidos! Reiniciando ciclo.');
+        showToast('Ciclo concluído! Reiniciando sorteio.');
       }
       const randomPos = Math.floor(Math.random() * unplayedIndices.length);
       nextIndex = unplayedIndices.splice(randomPos, 1)[0];
@@ -307,6 +318,7 @@
   }
 
   function playPrevVideo() {
+    clearTimeout(errorSkipTimer);
     if (historyPointer > 0) {
       historyPointer--;
       loadVideo(playedHistory[historyPointer]);
@@ -319,18 +331,23 @@
   function loadVideo(index) {
     if (index < 0 || index >= videoFiles.length) return;
 
+    activeIndex = index;
     const file = videoFiles[index];
 
-    // Revoke previous Blob URL to prevent memory leaks
+    // Safely queue old Blob URL for revocation after new video starts buffering
     if (activeObjectUrl) {
-      URL.revokeObjectURL(activeObjectUrl);
+      pendingRevokeUrls.push(activeObjectUrl);
     }
 
+    // Create fresh object URL
     activeObjectUrl = URL.createObjectURL(file);
+
+    // Clean player state before setting new src
+    mainVideo.pause();
     mainVideo.src = activeObjectUrl;
     mainVideo.playbackRate = parseFloat(speedSelector.value);
 
-    // Update Header Metadata
+    // Update Metadata Header
     const fullPath = file.webkitRelativePath || file.name;
     const pathParts = fullPath.split('/');
     const folderName = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : 'Pasta Principal';
@@ -341,12 +358,36 @@
 
     highlightPlaylistItem(index);
 
+    // Attempt playback
     mainVideo.play().then(() => {
       updatePlayPauseIcons(true);
     }).catch((err) => {
-      console.warn('Autoplay prevented:', err);
+      // Browsers may block un-muted autoplay if user hasn't interacted yet
+      console.log('Autoplay standard notice:', err);
       updatePlayPauseIcons(false);
     });
+  }
+
+  function handleVideoLoadedData() {
+    // Revoke old URLs now that the current video has successfully initialized
+    while (pendingRevokeUrls.length > 0) {
+      const url = pendingRevokeUrls.shift();
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  function handleVideoError(e) {
+    console.warn('Video decoding or format error:', e, mainVideo.error);
+    const failedFile = videoFiles[activeIndex];
+    const fileName = failedFile ? failedFile.name : 'arquivo';
+    
+    showToast(`Formato não suportado: ${fileName}`);
+
+    // Auto-skip unplayable video after 1.5s
+    clearTimeout(errorSkipTimer);
+    errorSkipTimer = setTimeout(() => {
+      playNextVideo(true);
+    }, 1500);
   }
 
   /* ----------------------------------------------------
@@ -507,15 +548,14 @@
   function showToast(message) {
     toastText.textContent = message;
     toastNotification.classList.remove('hidden');
-    // Trigger CSS animation re-run
     toastNotification.style.animation = 'none';
     void toastNotification.offsetWidth;
-    toastNotification.style.animation = 'toastFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+    toastNotification.style.animation = 'toastFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards';
 
     clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => {
       toastNotification.classList.add('hidden');
-    }, 600);
+    }, 1200);
   }
 
   /* ----------------------------------------------------
@@ -584,7 +624,6 @@
    * ---------------------------------------------------- */
 
   function handleGlobalKeydown(e) {
-    // Ignore if focus is in an input
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
       return;
     }
