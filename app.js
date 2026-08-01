@@ -1,9 +1,8 @@
 /**
  * Random Video Player for GitHub Pages
- * Handles local recursive folder reading, random video queueing,
- * custom player controls (-5s/+5s, play/pause, next video), and shortcuts.
- * 
- * Optimized for Instant Playback, 4K HEVC handling, and FFmpeg WASM Remuxing.
+ * Features dual modes:
+ *  1. Web Player: Watch directly inside the browser.
+ *  2. Native Sorteador: Pick random videos & launch them in your PC's native player (VLC / Windows Media Player).
  */
 
 (function () {
@@ -13,10 +12,26 @@
   const folderInput = document.getElementById('folderInput');
   const welcomeScreen = document.getElementById('welcomeScreen');
   const dropzone = document.getElementById('dropzone');
+  
+  // Mode Switcher
+  const btnModeWeb = document.getElementById('btnModeWeb');
+  const btnModeNative = document.getElementById('btnModeNative');
+  
+  // Web Player Stage
   const playerWrapper = document.getElementById('playerWrapper');
   const videoContainer = document.getElementById('videoContainer');
   const mainVideo = document.getElementById('mainVideo');
   const bigPlayTarget = document.getElementById('bigPlayTarget');
+
+  // Native Picker Stage
+  const nativePickerStage = document.getElementById('nativePickerStage');
+  const nativeFolderPath = document.getElementById('nativeFolderPath');
+  const nativeFileName = document.getElementById('nativeFileName');
+  const nativeFileSize = document.getElementById('nativeFileSize');
+  const btnOpenInPc = document.getElementById('btnOpenInPc');
+  const btnCopyPath = document.getElementById('btnCopyPath');
+  const btnNativeNext = document.getElementById('btnNativeNext');
+  const btnOpenCurrentInPc = document.getElementById('btnOpenCurrentInPc');
 
   // Video Metadata UI
   const videoCountBadge = document.getElementById('videoCountBadge');
@@ -66,19 +81,15 @@
   const playlistSearch = document.getElementById('playlistSearch');
   const playlistItems = document.getElementById('playlistItems');
 
-  // Modals UI
+  // Shortcuts Modal UI
   const btnShortcuts = document.getElementById('btnShortcuts');
   const shortcutsModal = document.getElementById('shortcutsModal');
   const btnCloseModal = document.getElementById('btnCloseModal');
 
-  const btnHevcHelp = document.getElementById('btnHevcHelp');
-  const hevcModal = document.getElementById('hevcModal');
-  const btnCloseHevcModal = document.getElementById('btnCloseHevcModal');
-
   // Supported video extensions
   const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogv', '.mov', '.mkv', '.m4v', '.avi', '.ts', '.3gp', '.flv', '.vob', '.wmv'];
   
-  // File size limit for WASM in-memory conversion (200MB)
+  // File size limit for WASM conversion (200MB)
   const MAX_WASM_FILE_SIZE = 200 * 1024 * 1024;
 
   // Application State
@@ -87,10 +98,11 @@
   let historyPointer = -1;
   let unplayedIndices = [];
 
+  let currentMode = 'web'; // 'web' or 'native'
   let isShuffleNoRepeat = true;
   let isAutoNextEnabled = true;
   
-  // Object URL & FFmpeg State
+  // Object URL & State
   let activeObjectUrl = null;
   let activeIndex = -1;
   let pendingRevokeUrls = [];
@@ -106,6 +118,11 @@
   }
 
   function bindEvents() {
+    // Mode Switcher
+    btnModeWeb.addEventListener('click', () => setAppMode('web'));
+    btnModeNative.addEventListener('click', () => setAppMode('native'));
+
+    // Folder Inputs
     folderInput.addEventListener('change', handleFolderSelect);
 
     window.addEventListener('dragover', (e) => e.preventDefault());
@@ -117,6 +134,13 @@
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
     dropzone.addEventListener('drop', handleDrop);
 
+    // Native Picker Buttons
+    btnOpenInPc.addEventListener('click', () => openInNativePlayer(videoFiles[activeIndex]));
+    btnOpenCurrentInPc.addEventListener('click', () => openInNativePlayer(videoFiles[activeIndex]));
+    btnCopyPath.addEventListener('click', copyActiveFilePath);
+    btnNativeNext.addEventListener('click', () => playNextVideo(true));
+
+    // Web Player Controls
     btnPlayPause.addEventListener('click', togglePlayPause);
     bigPlayTarget.addEventListener('click', togglePlayPause);
 
@@ -156,21 +180,36 @@
     drawerOverlay.addEventListener('click', closePlaylistDrawer);
     playlistSearch.addEventListener('input', filterPlaylistItems);
 
-    // Shortcuts Modal
     btnShortcuts.addEventListener('click', () => shortcutsModal.classList.remove('hidden'));
     btnCloseModal.addEventListener('click', () => shortcutsModal.classList.add('hidden'));
     shortcutsModal.addEventListener('click', (e) => {
       if (e.target === shortcutsModal) shortcutsModal.classList.add('hidden');
     });
 
-    // 4K HEVC Help Modal
-    btnHevcHelp.addEventListener('click', () => hevcModal.classList.remove('hidden'));
-    btnCloseHevcModal.addEventListener('click', () => hevcModal.classList.add('hidden'));
-    hevcModal.addEventListener('click', (e) => {
-      if (e.target === hevcModal) hevcModal.classList.add('hidden');
-    });
-
     document.addEventListener('keydown', handleGlobalKeydown);
+  }
+
+  /* ----------------------------------------------------
+   * App Mode Switcher (Web Player vs Sorteador Nativo)
+   * ---------------------------------------------------- */
+
+  function setAppMode(mode) {
+    currentMode = mode;
+    btnModeWeb.classList.toggle('active', mode === 'web');
+    btnModeNative.classList.toggle('active', mode === 'native');
+
+    if (videoFiles.length > 0) {
+      if (mode === 'web') {
+        nativePickerStage.classList.add('hidden');
+        playerWrapper.classList.remove('hidden');
+        if (activeIndex >= 0) loadVideo(activeIndex);
+      } else {
+        playerWrapper.classList.add('hidden');
+        mainVideo.pause();
+        nativePickerStage.classList.remove('hidden');
+        if (activeIndex >= 0) updateNativePickerUI(activeIndex);
+      }
+    }
   }
 
   /* ----------------------------------------------------
@@ -274,7 +313,14 @@
     btnPlaylistToggle.disabled = false;
 
     welcomeScreen.classList.add('hidden');
-    playerWrapper.classList.remove('hidden');
+
+    if (currentMode === 'web') {
+      playerWrapper.classList.remove('hidden');
+      nativePickerStage.classList.add('hidden');
+    } else {
+      playerWrapper.classList.add('hidden');
+      nativePickerStage.classList.remove('hidden');
+    }
 
     renderPlaylist();
     playNextVideo(true);
@@ -296,7 +342,9 @@
 
     if (!forceNewRandom && historyPointer >= 0 && historyPointer < playedHistory.length - 1) {
       historyPointer++;
-      loadVideo(playedHistory[historyPointer]);
+      const idx = playedHistory[historyPointer];
+      if (currentMode === 'web') loadVideo(idx);
+      else updateNativePickerUI(idx);
       return;
     }
 
@@ -315,7 +363,11 @@
     playedHistory.push(nextIndex);
     historyPointer = playedHistory.length - 1;
 
-    loadVideo(nextIndex);
+    if (currentMode === 'web') {
+      loadVideo(nextIndex);
+    } else {
+      updateNativePickerUI(nextIndex);
+    }
   }
 
   function playPrevVideo() {
@@ -324,11 +376,33 @@
 
     if (historyPointer > 0) {
       historyPointer--;
-      loadVideo(playedHistory[historyPointer]);
+      const idx = playedHistory[historyPointer];
+      if (currentMode === 'web') loadVideo(idx);
+      else updateNativePickerUI(idx);
       showToast('Vídeo anterior');
     } else {
       showToast('Início do histórico');
     }
+  }
+
+  function updateNativePickerUI(index) {
+    if (index < 0 || index >= videoFiles.length) return;
+
+    activeIndex = index;
+    const file = videoFiles[index];
+
+    const fullPath = file.webkitRelativePath || file.name;
+    const pathParts = fullPath.split('/');
+    const folderName = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : 'Pasta Principal';
+
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+
+    nativeFolderPath.textContent = folderName;
+    nativeFileName.textContent = file.name;
+    nativeFileSize.textContent = `${sizeMB} MB`;
+
+    highlightPlaylistItem(index);
+    showToast(`Sorteado: ${file.name}`);
   }
 
   function loadVideo(index) {
@@ -373,6 +447,54 @@
   }
 
   /* ----------------------------------------------------
+   * Native Desktop Player Trigger & Helpers
+   * ---------------------------------------------------- */
+
+  function openInNativePlayer(file) {
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    
+    // Create temporary link and trigger open/download so OS launches VLC / default player
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.click();
+
+    showToast(`Abrindo ${file.name} no player do PC...`);
+  }
+
+  function copyActiveFilePath() {
+    const file = videoFiles[activeIndex];
+    if (!file) return;
+    const fullPath = file.webkitRelativePath || file.name;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(fullPath).then(() => {
+        showToast('Nome/Caminho copiado!');
+      }).catch(() => {
+        fallbackCopyTextToClipboard(fullPath);
+      });
+    } else {
+      fallbackCopyTextToClipboard(fullPath);
+    }
+  }
+
+  function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showToast('Nome/Caminho copiado!');
+    } catch (err) {
+      showToast('Erro ao copiar.');
+    }
+    document.body.removeChild(textArea);
+  }
+
+  /* ----------------------------------------------------
    * Error Handling & FFmpeg Remuxing
    * ---------------------------------------------------- */
 
@@ -398,13 +520,12 @@
 
     console.warn(`Native playback error for (${failedFile.name}, ${fileSizeMB} MB):`, mainVideo.error);
 
-    // If file is > 200MB, attempting WebAssembly conversion would overflow memory
     if (isLargeFile) {
-      showToast(`Codec/4K (${fileSizeMB}MB) não suportado pelo navegador. Pulando...`);
+      showToast(`Vídeo grande (${fileSizeMB}MB). Clique em "Abrir no PC"!`);
       clearTimeout(errorSkipTimer);
       errorSkipTimer = setTimeout(() => {
         playNextVideo(true);
-      }, 1500);
+      }, 2000);
       return;
     }
 
@@ -412,7 +533,7 @@
       isConversionAttempted = true;
       attemptFFmpegRemux(failedFile);
     } else {
-      showToast(`Formato/Codec não suportado (${failedFile.name}). Pulando...`);
+      showToast(`Não foi possível ler (${failedFile.name}). Pulando...`);
       clearTimeout(errorSkipTimer);
       errorSkipTimer = setTimeout(() => {
         playNextVideo(true);
@@ -465,11 +586,11 @@
 
     } catch (err) {
       console.error('FFmpeg remux failed:', err);
-      showToast('Não foi possível converter este vídeo. Pulando...');
+      showToast('Não foi possível converter. Clique em "Abrir no PC"!');
       clearTimeout(errorSkipTimer);
       errorSkipTimer = setTimeout(() => {
         playNextVideo(true);
-      }, 1500);
+      }, 2000);
     }
   }
 
@@ -672,7 +793,8 @@
       li.addEventListener('click', () => {
         playedHistory.push(index);
         historyPointer = playedHistory.length - 1;
-        loadVideo(index);
+        if (currentMode === 'web') loadVideo(index);
+        else updateNativePickerUI(index);
         closePlaylistDrawer();
       });
 

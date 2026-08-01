@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Random Video Player - GitHub Pages</title>
-  <meta name="description" content="Player de vídeos aleatórios local para navegador. Escolha uma pasta com subpastas e reproduza seus vídeos aleatoriamente.">
+  <meta name="description" content="Player e Sorteador de vídeos aleatórios local para navegador. Escolha uma pasta com subpastas e reproduza seus vídeos no navegador ou no player do PC.">
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,6 +26,12 @@
       </div>
 
       <div class="header-actions">
+        <!-- Mode Switcher: Web Player vs Sorteador Nativo -->
+        <div class="mode-switch-group">
+          <button id="btnModeWeb" class="mode-tab active" title="Assistir no Navegador">Player Web</button>
+          <button id="btnModeNative" class="mode-tab" title="Sortear e abrir no Player do PC (VLC / Windows)">Sorteador PC</button>
+        </div>
+
         <label for="folderInput" class="btn btn-primary" title="Escolher pasta no seu computador">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
           <span>Escolher Pasta</span>
@@ -37,12 +43,8 @@
           <span>Playlist</span>
         </button>
 
-        <button id="btnHevcHelp" class="btn btn-secondary" title="Ajuda para vídeos 4K / HEVC">
-          <span style="color: #ec4899; font-weight: 800;">4K / HEVC</span>
-        </button>
-
         <button id="btnShortcuts" class="btn btn-icon" title="Atalhos do Teclado">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8.01"></line><line x1="10" y1="8" x2="10" y2="8.01"></line><line x1="14" y1="8" x2="14" y2="8.01"></line><line x1="18" y1="8" x2="18" y2="8.01"></line><line x1="6" y1="12" x2="6" y2="12.01"></line><line x1="18" y1="12" x2="18" y2="12.01"></line><line x1="8" y1="16" x2="16" y2="16"></line></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8.01"></line><line x1="10" y1="8" x2="10" y2="8.01"></line><line x1="14" y1="8" x2="14" y2="8.01"></line><line x1="6" y1="12" x2="6" y2="12.01"></line><line x1="18" y1="12" x2="18" y2="12.01"></line><line x1="8" y1="16" x2="16" y2="16"></line></svg>
         </button>
       </div>
     </header>
@@ -72,14 +74,41 @@
         </div>
       </section>
 
-      <!-- Video Player Wrapper -->
+      <!-- Modo Sorteador Nativo (Cartão para abrir no Player do PC / VLC) -->
+      <section id="nativePickerStage" class="native-picker-stage hidden">
+        <div class="picker-card">
+          <div class="picker-header-badge">🎰 Vídeo Sorteado</div>
+          <span class="picker-folder-path" id="nativeFolderPath">Subpasta</span>
+          <h2 class="picker-filename" id="nativeFileName">NomeDoVideo.mp4</h2>
+          <span class="picker-filesize" id="nativeFileSize">0 MB</span>
+
+          <div class="picker-actions">
+            <button id="btnOpenInPc" class="btn btn-primary btn-lg" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Abrir no Player do PC (VLC / Windows)</span>
+            </button>
+
+            <button id="btnCopyPath" class="btn btn-secondary btn-lg">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copiar Nome do Arquivo</span>
+            </button>
+
+            <button id="btnNativeNext" class="btn btn-secondary btn-lg btn-accent-glow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+              <span>Sortear Outro Vídeo (Tecla N)</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Video Player Wrapper (Web Player) -->
       <section id="playerWrapper" class="player-wrapper hidden">
         
         <!-- Video Element Container -->
         <div class="video-container" id="videoContainer">
           <video id="mainVideo" preload="auto" playsinline></video>
 
-          <!-- Toast Overlay for Actions (-5s, +5s, Play, Pause, etc) -->
+          <!-- Toast Overlay -->
           <div id="toastNotification" class="toast-overlay hidden">
             <span id="toastIcon"></span>
             <span id="toastText"></span>
@@ -91,7 +120,12 @@
               <span class="video-path-badge" id="videoFolderPath">Subpasta</span>
               <h1 class="video-filename" id="videoFileName">Nome do Vídeo.mp4</h1>
             </div>
-            <div class="video-index-badge" id="videoIndexBadge">0 / 0</div>
+            <div class="video-info-right">
+              <button id="btnOpenCurrentInPc" class="btn btn-secondary btn-sm" title="Abrir este vídeo no VLC / Player do PC">
+                <span>Abrir no PC</span>
+              </button>
+              <div class="video-index-badge" id="videoIndexBadge">0 / 0</div>
+            </div>
           </div>
 
           <!-- Big Play Pause Click Target -->
@@ -221,33 +255,6 @@
           <div class="shortcut-row"><kbd>F</kbd><span>Tela Cheia</span></div>
           <div class="shortcut-row"><kbd>M</kbd><span>Mutar / Desmutar</span></div>
           <div class="shortcut-row"><kbd>Seta Cima / Baixo</kbd><span>Ajustar Volume</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4K HEVC Help Modal -->
-    <div id="hevcModal" class="modal-backdrop hidden">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h2>Como reproduzir Vídeos 4K / HEVC no Navegador</h2>
-          <button id="btnCloseHevcModal" class="btn btn-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </button>
-        </div>
-        <div class="modal-body" style="gap: 16px; font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);">
-          <p><strong style="color: #ffffff;">Por que vídeos 4K MP4 não abrem?</strong><br>
-          A maioria dos vídeos 4K modernos (gravados por celulares, câmeras ou filmes) usa o codec **H.265 / HEVC**. Os navegadores no Windows desativam o H.265 por padrão por questões de licença comercial.</p>
-          
-          <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid var(--border-glass-light); padding: 14px; border-radius: var(--radius-md);">
-            <strong style="color: var(--accent-primary);">Solução Gratuita no Windows (1 Minuto):</strong>
-            <ol style="margin-left: 20px; margin-top: 8px;">
-              <li>Abra a <strong>Microsoft Store</strong> no seu Windows.</li>
-              <li>Busque por <strong>"Extensões de Vídeo HEVC"</strong> ou instale o pacote de suporte do fabricante da sua GPU (Intel, AMD ou NVIDIA).</li>
-              <li>Verifique se no Chrome/Edge a opção <strong>"Usar aceleração de hardware quando disponível"</strong> está ligada em <em>Configurações > Sistema</em>.</li>
-            </ol>
-          </div>
-
-          <p style="font-size: 0.8rem; color: var(--text-dim);">Após instalar o suporte HEVC no Windows, todos os seus vídeos 4K MP4 rodarão liso em 60fps no Chrome, Edge ou Brave!</p>
         </div>
       </div>
     </div>

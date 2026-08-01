@@ -118,6 +118,34 @@ body {
   gap: 12px;
 }
 
+/* Mode Switch Tabs */
+.mode-switch-group {
+  display: flex;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  padding: 3px;
+  border-radius: var(--radius-md);
+}
+
+.mode-tab {
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mode-tab.active {
+  background: var(--accent-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
 .hidden-input {
   display: none !important;
 }
@@ -193,6 +221,12 @@ body {
   border-radius: var(--radius-lg);
 }
 
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
 /* Main Stage */
 .main-stage {
   flex: 1;
@@ -265,6 +299,78 @@ body {
   color: var(--text-dim);
 }
 
+/* Native Picker Stage (Sorteador Nativo) */
+.native-picker-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.picker-card {
+  width: 100%;
+  max-width: 640px;
+  padding: 40px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass-light);
+  backdrop-filter: blur(24px);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.picker-header-badge {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-secondary);
+  background: rgba(236, 72, 153, 0.12);
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+}
+
+.picker-folder-path {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.picker-filename {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.picker-filesize {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+}
+
+.picker-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.picker-actions .btn {
+  width: 100%;
+}
+
 /* Player Wrapper */
 .player-wrapper {
   width: 100%;
@@ -276,7 +382,8 @@ body {
   background: #000000;
 }
 
-.player-wrapper.hidden {
+.player-wrapper.hidden,
+.native-picker-stage.hidden {
   display: none !important;
 }
 
@@ -297,7 +404,7 @@ video {
   background: #000000;
 }
 
-/* Big Play Target (Invisible click zone over video) */
+/* Big Play Target */
 .big-play-target {
   position: absolute;
   inset: 0;
@@ -305,7 +412,7 @@ video {
   cursor: pointer;
 }
 
-/* Video Info Header Overlay */
+/* Video Info Overlay */
 .video-info-overlay {
   position: absolute;
   top: 0;
@@ -322,6 +429,16 @@ video {
   transition: opacity var(--transition-normal);
 }
 
+.video-info-overlay button {
+  pointer-events: auto;
+}
+
+.video-info-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .video-container.idle .video-info-overlay,
 .video-container.idle .controls-overlay {
   opacity: 0;
@@ -332,7 +449,7 @@ video {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 75%;
+  max-width: 65%;
 }
 
 .video-path-badge {
@@ -384,7 +501,7 @@ video {
   z-index: 10;
   pointer-events: none;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  animation: toastFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: toastFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .toast-overlay.hidden {
@@ -399,7 +516,7 @@ video {
 }
 
 #toastText {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #ffffff;
 }
@@ -752,7 +869,7 @@ video {
 
 .modal-card {
   width: 90%;
-  max-width: 480px;
+  max-width: 520px;
   background: var(--bg-card);
   border: 1px solid var(--border-glass-light);
   border-radius: var(--radius-lg);
