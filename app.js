@@ -3,7 +3,7 @@
  * Handles local recursive folder reading, random video queueing,
  * custom player controls (-5s/+5s, play/pause, next video), and shortcuts.
  * 
- * Optimized for Instant Playback & Zero-Lag Blob Streaming.
+ * Includes FFmpeg WebAssembly Client-Side Remuxer for Unsupported Formats (.mkv, AC3 audio, avi).
  */
 
 (function () {
@@ -72,23 +72,26 @@
   const btnCloseModal = document.getElementById('btnCloseModal');
 
   // Supported video extensions
-  const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogv', '.mov', '.mkv', '.m4v', '.avi', '.ts', '.3gp'];
+  const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogv', '.mov', '.mkv', '.m4v', '.avi', '.ts', '.3gp', '.flv', '.vob', '.wmv'];
 
   // Application State
   let videoFiles = [];
-  let playedHistory = []; // Array of indices played so far
-  let historyPointer = -1; // Current index pointer within playedHistory
-  let unplayedIndices = []; // Array of remaining unplayed indices for non-repeating shuffle
+  let playedHistory = [];
+  let historyPointer = -1;
+  let unplayedIndices = [];
 
   let isShuffleNoRepeat = true;
   let isAutoNextEnabled = true;
   
-  // Object URL Cache Management
+  // Object URL & FFmpeg State
   let activeObjectUrl = null;
   let activeIndex = -1;
   let pendingRevokeUrls = [];
   let errorSkipTimer = null;
   let idleTimer = null;
+
+  let ffmpegInstance = null;
+  let isConversionAttempted = false;
 
   // Init
   function init() {
@@ -96,10 +99,8 @@
   }
 
   function bindEvents() {
-    // File Folder Input
     folderInput.addEventListener('change', handleFolderSelect);
 
-    // Drag & Drop
     window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('drop', (e) => e.preventDefault());
     dropzone.addEventListener('dragover', (e) => {
@@ -109,7 +110,6 @@
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
     dropzone.addEventListener('drop', handleDrop);
 
-    // Player Controls
     btnPlayPause.addEventListener('click', togglePlayPause);
     bigPlayTarget.addEventListener('click', togglePlayPause);
 
@@ -119,7 +119,6 @@
     btnNextVideo.addEventListener('click', () => playNextVideo(true));
     btnPrevVideo.addEventListener('click', playPrevVideo);
 
-    // Progress Bar & Video Events
     mainVideo.addEventListener('timeupdate', updateProgress);
     mainVideo.addEventListener('progress', updateBuffer);
     mainVideo.addEventListener('ended', handleVideoEnded);
@@ -129,11 +128,9 @@
     seekSlider.addEventListener('input', handleSeekInput);
     progressBarContainer.addEventListener('mousemove', handleSeekHover);
 
-    // Settings
     btnShuffleMode.addEventListener('click', toggleShuffleMode);
     btnAutoNext.addEventListener('click', toggleAutoNext);
 
-    // Volume & Speed
     btnMute.addEventListener('click', toggleMute);
     volumeSlider.addEventListener('input', handleVolumeChange);
     speedSelector.addEventListener('change', (e) => {
@@ -141,28 +138,23 @@
       showToast(`Velocidade: ${e.target.value}x`);
     });
 
-    // Fullscreen
     btnFullscreen.addEventListener('click', toggleFullscreen);
     document.addEventListener('fullscreenchange', updateFullscreenIcons);
 
-    // Idle Hide Controls
     videoContainer.addEventListener('mousemove', resetIdleTimer);
     videoContainer.addEventListener('mouseleave', hideControls);
 
-    // Playlist Drawer
     btnPlaylistToggle.addEventListener('click', openPlaylistDrawer);
     btnCloseDrawer.addEventListener('click', closePlaylistDrawer);
     drawerOverlay.addEventListener('click', closePlaylistDrawer);
     playlistSearch.addEventListener('input', filterPlaylistItems);
 
-    // Shortcuts Modal
     btnShortcuts.addEventListener('click', () => shortcutsModal.classList.remove('hidden'));
     btnCloseModal.addEventListener('click', () => shortcutsModal.classList.add('hidden'));
     shortcutsModal.addEventListener('click', (e) => {
       if (e.target === shortcutsModal) shortcutsModal.classList.add('hidden');
     });
 
-    // Global Hotkeys
     document.addEventListener('keydown', handleGlobalKeydown);
   }
 
@@ -210,7 +202,6 @@
     processFiles(files);
   }
 
-  // Recursive reader for DataTransfer entries
   function readEntryRecursively(entry, path = '') {
     return new Promise((resolve) => {
       if (entry.isFile) {
@@ -253,19 +244,16 @@
       return;
     }
 
-    // Sort files by path for playlist listing
     videoFiles.sort((a, b) => {
       const pathA = a.webkitRelativePath || a.name;
       const pathB = b.webkitRelativePath || b.name;
       return pathA.localeCompare(pathB);
     });
 
-    // Reset Queue States
     playedHistory = [];
     historyPointer = -1;
     resetUnplayedIndices();
 
-    // Update UI
     videoCountBadge.textContent = `${videoFiles.length} vídeo${videoFiles.length > 1 ? 's' : ''}`;
     drawerCount.textContent = videoFiles.length;
     btnPlaylistToggle.disabled = false;
@@ -274,7 +262,7 @@
     playerWrapper.classList.remove('hidden');
 
     renderPlaylist();
-    playNextVideo(true); // Pick first random video
+    playNextVideo(true);
   }
 
   function resetUnplayedIndices() {
@@ -288,21 +276,19 @@
   function playNextVideo(forceNewRandom = false) {
     if (videoFiles.length === 0) return;
 
-    // Clear error auto-skip timer if user clicks next manually
     clearTimeout(errorSkipTimer);
+    isConversionAttempted = false;
 
-    // If navigating back in history and forward is requested
     if (!forceNewRandom && historyPointer >= 0 && historyPointer < playedHistory.length - 1) {
       historyPointer++;
       loadVideo(playedHistory[historyPointer]);
       return;
     }
 
-    // Pick a new random video index
     let nextIndex;
     if (isShuffleNoRepeat) {
       if (unplayedIndices.length === 0) {
-        resetUnplayedIndices(); // Reset stack if all played
+        resetUnplayedIndices();
         showToast('Ciclo concluído! Reiniciando sorteio.');
       }
       const randomPos = Math.floor(Math.random() * unplayedIndices.length);
@@ -319,6 +305,8 @@
 
   function playPrevVideo() {
     clearTimeout(errorSkipTimer);
+    isConversionAttempted = false;
+
     if (historyPointer > 0) {
       historyPointer--;
       loadVideo(playedHistory[historyPointer]);
@@ -334,20 +322,16 @@
     activeIndex = index;
     const file = videoFiles[index];
 
-    // Safely queue old Blob URL for revocation after new video starts buffering
     if (activeObjectUrl) {
       pendingRevokeUrls.push(activeObjectUrl);
     }
 
-    // Create fresh object URL
     activeObjectUrl = URL.createObjectURL(file);
 
-    // Clean player state before setting new src
     mainVideo.pause();
     mainVideo.src = activeObjectUrl;
     mainVideo.playbackRate = parseFloat(speedSelector.value);
 
-    // Update Metadata Header
     const fullPath = file.webkitRelativePath || file.name;
     const pathParts = fullPath.split('/');
     const folderName = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : 'Pasta Principal';
@@ -358,36 +342,110 @@
 
     highlightPlaylistItem(index);
 
-    // Attempt playback
     mainVideo.play().then(() => {
       updatePlayPauseIcons(true);
     }).catch((err) => {
-      // Browsers may block un-muted autoplay if user hasn't interacted yet
-      console.log('Autoplay standard notice:', err);
+      console.log('Autoplay notice:', err);
       updatePlayPauseIcons(false);
     });
   }
 
   function handleVideoLoadedData() {
-    // Revoke old URLs now that the current video has successfully initialized
     while (pendingRevokeUrls.length > 0) {
       const url = pendingRevokeUrls.shift();
       URL.revokeObjectURL(url);
     }
   }
 
-  function handleVideoError(e) {
-    console.warn('Video decoding or format error:', e, mainVideo.error);
-    const failedFile = videoFiles[activeIndex];
-    const fileName = failedFile ? failedFile.name : 'arquivo';
-    
-    showToast(`Formato não suportado: ${fileName}`);
+  /* ----------------------------------------------------
+   * FFmpeg WASM Auto-Remuxing / Transcoding for Unsupported Formats
+   * ---------------------------------------------------- */
 
-    // Auto-skip unplayable video after 1.5s
-    clearTimeout(errorSkipTimer);
-    errorSkipTimer = setTimeout(() => {
-      playNextVideo(true);
-    }, 1500);
+  async function getFFmpeg() {
+    if (ffmpegInstance) return ffmpegInstance;
+    if (window.FFmpeg && window.FFmpeg.createFFmpeg) {
+      ffmpegInstance = window.FFmpeg.createFFmpeg({
+        log: false,
+        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+      });
+      await ffmpegInstance.load();
+      return ffmpegInstance;
+    }
+    return null;
+  }
+
+  async function handleVideoError(e) {
+    const failedFile = videoFiles[activeIndex];
+    if (!failedFile) return;
+
+    console.warn('Native browser playback error for:', failedFile.name, mainVideo.error);
+
+    // If we haven't attempted FFmpeg WASM remuxing yet, try converting audio/container
+    if (!isConversionAttempted && window.FFmpeg) {
+      isConversionAttempted = true;
+      attemptFFmpegRemux(failedFile);
+    } else {
+      showToast(`Formato não suportado (${failedFile.name}). Pulando...`);
+      clearTimeout(errorSkipTimer);
+      errorSkipTimer = setTimeout(() => {
+        playNextVideo(true);
+      }, 1500);
+    }
+  }
+
+  async function attemptFFmpegRemux(file) {
+    try {
+      showToast('Convertendo formato no navegador...');
+      const ffmpeg = await getFFmpeg();
+      
+      if (!ffmpeg) {
+        throw new Error('FFmpeg WASM não pôde ser carregado.');
+      }
+
+      const { fetchFile } = window.FFmpeg;
+      const fileData = await fetchFile(file);
+      
+      const ext = file.name.split('.').pop().toLowerCase() || 'mkv';
+      const inName = `input.${ext}`;
+      const outName = 'converted.mp4';
+
+      ffmpeg.FS('writeFile', inName, fileData);
+
+      showToast('Remuxing rápido de áudio/vídeo...');
+      // Fast stream copy for video (-c:v copy) and convert audio to AAC (-c:a aac)
+      await ffmpeg.run('-i', inName, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', outName);
+
+      const outData = ffmpeg.FS('readFile', outName);
+      const convertedBlob = new Blob([outData.buffer], { type: 'video/mp4' });
+
+      // Clean FS
+      try {
+        ffmpeg.FS('unlink', inName);
+        ffmpeg.FS('unlink', outName);
+      } catch (err) {}
+
+      if (activeObjectUrl) {
+        pendingRevokeUrls.push(activeObjectUrl);
+      }
+      activeObjectUrl = URL.createObjectURL(convertedBlob);
+
+      mainVideo.pause();
+      mainVideo.src = activeObjectUrl;
+      mainVideo.play().then(() => {
+        updatePlayPauseIcons(true);
+        showToast('Vídeo convertido e reproduzindo!');
+      }).catch((playErr) => {
+        console.error('Play error after conversion:', playErr);
+      });
+
+    } catch (err) {
+      console.error('FFmpeg remux failed:', err);
+      showToast('Não foi possível converter este vídeo. Pulando...');
+      clearTimeout(errorSkipTimer);
+      errorSkipTimer = setTimeout(() => {
+        playNextVideo(true);
+      }, 1500);
+    }
   }
 
   /* ----------------------------------------------------
@@ -555,7 +613,7 @@
     clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => {
       toastNotification.classList.add('hidden');
-    }, 1200);
+    }, 1500);
   }
 
   /* ----------------------------------------------------
