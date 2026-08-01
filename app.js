@@ -455,13 +455,16 @@
 
     const url = URL.createObjectURL(file);
     
-    // Create temporary link and trigger open/download so OS launches VLC / default player
+    // Setting download attribute prevents Chrome from opening a new tab
+    // It triggers file handoff to OS / Default Desktop Player (VLC / Media Player)
     const a = document.createElement('a');
     a.href = url;
-    a.target = '_blank';
+    a.download = file.name;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
 
-    showToast(`Abrindo ${file.name} no player do PC...`);
+    showToast(`Abrindo ${file.name} no Player do PC...`);
   }
 
   function copyActiveFilePath() {
