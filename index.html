@@ -37,6 +37,10 @@
           <span>Playlist</span>
         </button>
 
+        <button id="btnHevcHelp" class="btn btn-secondary" title="Ajuda para vídeos 4K / HEVC">
+          <span style="color: #ec4899; font-weight: 800;">4K / HEVC</span>
+        </button>
+
         <button id="btnShortcuts" class="btn btn-icon" title="Atalhos do Teclado">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8.01"></line><line x1="10" y1="8" x2="10" y2="8.01"></line><line x1="14" y1="8" x2="14" y2="8.01"></line><line x1="18" y1="8" x2="18" y2="8.01"></line><line x1="6" y1="12" x2="6" y2="12.01"></line><line x1="18" y1="12" x2="18" y2="12.01"></line><line x1="8" y1="16" x2="16" y2="16"></line></svg>
         </button>
@@ -46,7 +50,7 @@
     <!-- Main Content Area -->
     <main class="main-stage">
       
-      <!-- Welcome / Dropzone Screen (When no folder is selected yet) -->
+      <!-- Welcome / Dropzone Screen -->
       <section id="welcomeScreen" class="welcome-screen">
         <div class="dropzone" id="dropzone">
           <div class="dropzone-illustration">
@@ -68,7 +72,7 @@
         </div>
       </section>
 
-      <!-- Video Player Wrapper (Active state) -->
+      <!-- Video Player Wrapper -->
       <section id="playerWrapper" class="player-wrapper hidden">
         
         <!-- Video Element Container -->
@@ -107,7 +111,7 @@
             <!-- Control Buttons Row -->
             <div class="controls-row">
               
-              <!-- Left Controls (Play/Pause, Skip 5s, Prev/Next) -->
+              <!-- Left Controls -->
               <div class="controls-group left-controls">
                 
                 <button id="btnPrevVideo" class="control-btn" title="Vídeo Anterior (Tecla P)">
@@ -139,20 +143,17 @@
                 </div>
               </div>
 
-              <!-- Right Controls (Mode toggles, Volume, Speed, Fullscreen) -->
+              <!-- Right Controls -->
               <div class="controls-group right-controls">
 
-                <!-- No-repeat shuffle toggle -->
                 <button id="btnShuffleMode" class="control-btn active" title="Alternar Sem Repetição">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
                 </button>
 
-                <!-- Auto Play Next toggle -->
                 <button id="btnAutoNext" class="control-btn active" title="Auto-Avançar ao terminar vídeo">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon><path d="M19 19v-6"></path></svg>
                 </button>
 
-                <!-- Volume Group -->
                 <div class="volume-container">
                   <button id="btnMute" class="control-btn" title="Mutar / Desmutar (Tecla M)">
                     <svg id="iconVolHigh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
@@ -161,7 +162,6 @@
                   <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" class="volume-slider">
                 </div>
 
-                <!-- Speed Selector -->
                 <select id="speedSelector" class="speed-selector" title="Velocidade de Reprodução">
                   <option value="0.5">0.5x</option>
                   <option value="0.75">0.75x</option>
@@ -171,7 +171,6 @@
                   <option value="2">2.0x</option>
                 </select>
 
-                <!-- Fullscreen Toggle -->
                 <button id="btnFullscreen" class="control-btn" title="Tela Cheia (Tecla F)">
                   <svg id="iconExpand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
                   <svg id="iconCompress" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
@@ -214,38 +213,41 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="shortcut-row">
-            <kbd>Espaço</kbd> / <kbd>K</kbd>
-            <span>Play / Pause</span>
+          <div class="shortcut-row"><kbd>Espaço</kbd> / <kbd>K</kbd><span>Play / Pause</span></div>
+          <div class="shortcut-row"><kbd>Seta Esquerda (←)</kbd> / <kbd>J</kbd><span>Voltar 5s</span></div>
+          <div class="shortcut-row"><kbd>Seta Direita (→)</kbd> / <kbd>L</kbd><span>Avançar 5s</span></div>
+          <div class="shortcut-row"><kbd>N</kbd><span>Próximo Vídeo Aleatório</span></div>
+          <div class="shortcut-row"><kbd>P</kbd><span>Vídeo Anterior no Histórico</span></div>
+          <div class="shortcut-row"><kbd>F</kbd><span>Tela Cheia</span></div>
+          <div class="shortcut-row"><kbd>M</kbd><span>Mutar / Desmutar</span></div>
+          <div class="shortcut-row"><kbd>Seta Cima / Baixo</kbd><span>Ajustar Volume</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4K HEVC Help Modal -->
+    <div id="hevcModal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Como reproduzir Vídeos 4K / HEVC no Navegador</h2>
+          <button id="btnCloseHevcModal" class="btn btn-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div class="modal-body" style="gap: 16px; font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);">
+          <p><strong style="color: #ffffff;">Por que vídeos 4K MP4 não abrem?</strong><br>
+          A maioria dos vídeos 4K modernos (gravados por celulares, câmeras ou filmes) usa o codec **H.265 / HEVC**. Os navegadores no Windows desativam o H.265 por padrão por questões de licença comercial.</p>
+          
+          <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid var(--border-glass-light); padding: 14px; border-radius: var(--radius-md);">
+            <strong style="color: var(--accent-primary);">Solução Gratuita no Windows (1 Minuto):</strong>
+            <ol style="margin-left: 20px; margin-top: 8px;">
+              <li>Abra a <strong>Microsoft Store</strong> no seu Windows.</li>
+              <li>Busque por <strong>"Extensões de Vídeo HEVC"</strong> ou instale o pacote de suporte do fabricante da sua GPU (Intel, AMD ou NVIDIA).</li>
+              <li>Verifique se no Chrome/Edge a opção <strong>"Usar aceleração de hardware quando disponível"</strong> está ligada em <em>Configurações > Sistema</em>.</li>
+            </ol>
           </div>
-          <div class="shortcut-row">
-            <kbd>Seta Esquerda (←)</kbd> / <kbd>J</kbd>
-            <span>Voltar 5 segundos (-5s)</span>
-          </div>
-          <div class="shortcut-row">
-            <kbd>Seta Direita (→)</kbd> / <kbd>L</kbd>
-            <span>Avançar 5 segundos (+5s)</span>
-          </div>
-          <div class="shortcut-row">
-            <kbd>N</kbd>
-            <span>Sortear Próximo Vídeo</span>
-          </div>
-          <div class="shortcut-row">
-            <kbd>P</kbd>
-            <span>Vídeo Anterior no Histórico</span>
-          </div>
-          <div class="shortcut-row">
-            <kbd>F</kbd>
-            <span>Alternar Tela Cheia</span>
-          </div>
-          <div class="shortcut-row">
-            <kbd>M</kbd>
-            <span>Mutar / Desmutar Áudio</span>
-          </div>
-          <div class="shortcut-row">
-            <kbd>Seta Cima (↑)</kbd> / <kbd>Seta Baixo (↓)</kbd>
-            <span>Aumentar / Diminuir Volume</span>
-          </div>
+
+          <p style="font-size: 0.8rem; color: var(--text-dim);">Após instalar o suporte HEVC no Windows, todos os seus vídeos 4K MP4 rodarão liso em 60fps no Chrome, Edge ou Brave!</p>
         </div>
       </div>
     </div>

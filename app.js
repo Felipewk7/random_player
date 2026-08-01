@@ -3,7 +3,7 @@
  * Handles local recursive folder reading, random video queueing,
  * custom player controls (-5s/+5s, play/pause, next video), and shortcuts.
  * 
- * Includes FFmpeg WebAssembly Client-Side Remuxer for Unsupported Formats (.mkv, AC3 audio, avi).
+ * Optimized for Instant Playback, 4K HEVC handling, and FFmpeg WASM Remuxing.
  */
 
 (function () {
@@ -66,13 +66,20 @@
   const playlistSearch = document.getElementById('playlistSearch');
   const playlistItems = document.getElementById('playlistItems');
 
-  // Shortcuts Modal UI
+  // Modals UI
   const btnShortcuts = document.getElementById('btnShortcuts');
   const shortcutsModal = document.getElementById('shortcutsModal');
   const btnCloseModal = document.getElementById('btnCloseModal');
 
+  const btnHevcHelp = document.getElementById('btnHevcHelp');
+  const hevcModal = document.getElementById('hevcModal');
+  const btnCloseHevcModal = document.getElementById('btnCloseHevcModal');
+
   // Supported video extensions
   const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogv', '.mov', '.mkv', '.m4v', '.avi', '.ts', '.3gp', '.flv', '.vob', '.wmv'];
+  
+  // File size limit for WASM in-memory conversion (200MB)
+  const MAX_WASM_FILE_SIZE = 200 * 1024 * 1024;
 
   // Application State
   let videoFiles = [];
@@ -149,10 +156,18 @@
     drawerOverlay.addEventListener('click', closePlaylistDrawer);
     playlistSearch.addEventListener('input', filterPlaylistItems);
 
+    // Shortcuts Modal
     btnShortcuts.addEventListener('click', () => shortcutsModal.classList.remove('hidden'));
     btnCloseModal.addEventListener('click', () => shortcutsModal.classList.add('hidden'));
     shortcutsModal.addEventListener('click', (e) => {
       if (e.target === shortcutsModal) shortcutsModal.classList.add('hidden');
+    });
+
+    // 4K HEVC Help Modal
+    btnHevcHelp.addEventListener('click', () => hevcModal.classList.remove('hidden'));
+    btnCloseHevcModal.addEventListener('click', () => hevcModal.classList.add('hidden'));
+    hevcModal.addEventListener('click', (e) => {
+      if (e.target === hevcModal) hevcModal.classList.add('hidden');
     });
 
     document.addEventListener('keydown', handleGlobalKeydown);
@@ -358,7 +373,7 @@
   }
 
   /* ----------------------------------------------------
-   * FFmpeg WASM Auto-Remuxing / Transcoding for Unsupported Formats
+   * Error Handling & FFmpeg Remuxing
    * ---------------------------------------------------- */
 
   async function getFFmpeg() {
@@ -378,14 +393,26 @@
     const failedFile = videoFiles[activeIndex];
     if (!failedFile) return;
 
-    console.warn('Native browser playback error for:', failedFile.name, mainVideo.error);
+    const fileSizeMB = (failedFile.size / (1024 * 1024)).toFixed(1);
+    const isLargeFile = failedFile.size > MAX_WASM_FILE_SIZE;
 
-    // If we haven't attempted FFmpeg WASM remuxing yet, try converting audio/container
+    console.warn(`Native playback error for (${failedFile.name}, ${fileSizeMB} MB):`, mainVideo.error);
+
+    // If file is > 200MB, attempting WebAssembly conversion would overflow memory
+    if (isLargeFile) {
+      showToast(`Codec/4K (${fileSizeMB}MB) não suportado pelo navegador. Pulando...`);
+      clearTimeout(errorSkipTimer);
+      errorSkipTimer = setTimeout(() => {
+        playNextVideo(true);
+      }, 1500);
+      return;
+    }
+
     if (!isConversionAttempted && window.FFmpeg) {
       isConversionAttempted = true;
       attemptFFmpegRemux(failedFile);
     } else {
-      showToast(`Formato não suportado (${failedFile.name}). Pulando...`);
+      showToast(`Formato/Codec não suportado (${failedFile.name}). Pulando...`);
       clearTimeout(errorSkipTimer);
       errorSkipTimer = setTimeout(() => {
         playNextVideo(true);
@@ -399,7 +426,7 @@
       const ffmpeg = await getFFmpeg();
       
       if (!ffmpeg) {
-        throw new Error('FFmpeg WASM não pôde ser carregado.');
+        throw new Error('FFmpeg WASM não disponível.');
       }
 
       const { fetchFile } = window.FFmpeg;
@@ -412,13 +439,11 @@
       ffmpeg.FS('writeFile', inName, fileData);
 
       showToast('Remuxing rápido de áudio/vídeo...');
-      // Fast stream copy for video (-c:v copy) and convert audio to AAC (-c:a aac)
       await ffmpeg.run('-i', inName, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', outName);
 
       const outData = ffmpeg.FS('readFile', outName);
       const convertedBlob = new Blob([outData.buffer], { type: 'video/mp4' });
 
-      // Clean FS
       try {
         ffmpeg.FS('unlink', inName);
         ffmpeg.FS('unlink', outName);
@@ -742,10 +767,6 @@
     }
   }
 
-  /* ----------------------------------------------------
-   * Helpers
-   * ---------------------------------------------------- */
-
   function formatTime(seconds) {
     if (isNaN(seconds)) return '00:00';
     const hrs = Math.floor(seconds / 3600);
@@ -760,6 +781,5 @@
     return `${pad(mins)}:${pad(secs)}`;
   }
 
-  // Run app
   document.addEventListener('DOMContentLoaded', init);
 })();
