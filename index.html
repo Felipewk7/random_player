@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Random Video Player - GitHub Pages</title>
-  <meta name="description" content="Player e Sorteador de vídeos aleatórios local para navegador. Escolha uma pasta com subpastas e reproduza seus vídeos no navegador ou no player do PC.">
+  <title>Sorteador de Vídeos Aleatórios - GitHub Pages</title>
+  <meta name="description" content="Sorteador de vídeos aleatórios local para navegador. Escolha uma pasta com subpastas e sorteie vídeos aleatoriamente.">
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,39 +20,33 @@
           <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
-          <span class="brand-name">Random<span class="accent-text">Player</span></span>
+          <span class="brand-name">Random<span class="accent-text">Sorteador</span></span>
         </div>
         <span class="badge" id="videoCountBadge">0 vídeos carregados</span>
       </div>
 
       <div class="header-actions">
-        <!-- Mode Switcher: Web Player vs Sorteador Nativo -->
-        <div class="mode-switch-group">
-          <button id="btnModeWeb" class="mode-tab active" title="Assistir no Navegador">Player Web</button>
-          <button id="btnModeNative" class="mode-tab" title="Sortear e abrir no Player do PC (VLC / Windows)">Sorteador PC</button>
-        </div>
-
         <label for="folderInput" class="btn btn-primary" title="Escolher pasta no seu computador">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
           <span>Escolher Pasta</span>
         </label>
         <input type="file" id="folderInput" webkitdirectory directory multiple accept="video/*" class="hidden-input">
 
-        <button id="btnPlaylistToggle" class="btn btn-secondary" title="Abrir Lista de Vídeos" disabled>
+        <button id="btnPlaylistToggle" class="btn btn-secondary" title="Abrir Lista de Todos os Vídeos" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
           <span>Playlist</span>
         </button>
 
         <button id="btnShortcuts" class="btn btn-icon" title="Atalhos do Teclado">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8.01"></line><line x1="10" y1="8" x2="10" y2="8.01"></line><line x1="14" y1="8" x2="14" y2="8.01"></line><line x1="6" y1="12" x2="6" y2="12.01"></line><line x1="18" y1="12" x2="18" y2="12.01"></line><line x1="8" y1="16" x2="16" y2="16"></line></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6" y2="8.01"></line><line x1="10" y1="8" x2="10" y2="8.01"></line><line x1="14" y1="8" x2="14" y2="8.01"></line><line x1="18" y1="8" x2="18" y2="8.01"></line><line x1="6" y1="12" x2="6" y2="12.01"></line><line x1="18" y1="12" x2="18" y2="12.01"></line><line x1="8" y1="16" x2="16" y2="16"></line></svg>
         </button>
       </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Stage -->
     <main class="main-stage">
       
-      <!-- Welcome / Dropzone Screen -->
+      <!-- Welcome Dropzone Screen -->
       <section id="welcomeScreen" class="welcome-screen">
         <div class="dropzone" id="dropzone">
           <div class="dropzone-illustration">
@@ -62,8 +56,8 @@
               <path d="m16 16-4-4-4 4"></path>
             </svg>
           </div>
-          <h2>Selecione uma pasta com vídeos</h2>
-          <p>Escolha a pasta do seu computador (todas as subpastas serão lidas automaticamente).</p>
+          <h2>Selecione uma pasta de vídeos</h2>
+          <p>Escolha a pasta do seu computador. Todas as subpastas serão lidas automaticamente e você poderá sortear os vídeos!</p>
           <div class="dropzone-actions">
             <label for="folderInput" class="btn btn-primary btn-lg">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
@@ -74,152 +68,61 @@
         </div>
       </section>
 
-      <!-- Modo Sorteador Nativo (Cartão para abrir no Player do PC / VLC Sem Baixar) -->
-      <section id="nativePickerStage" class="native-picker-stage hidden">
-        <div class="picker-card">
-          <div class="picker-header-badge">🎰 Vídeo Sorteado</div>
-          <span class="picker-folder-path" id="nativeFolderPath">Subpasta</span>
-          <h2 class="picker-filename" id="nativeFileName">NomeDoVideo.mp4</h2>
-          <span class="picker-filesize" id="nativeFileSize">0 MB</span>
-
-          <!-- Setup do Caminho Completo do PC (Salvo no navegador) -->
-          <div class="base-path-box">
-            <label for="baseFolderPathInput">Caminho da pasta no seu Windows (ex: C:\Users\Felifep\Videos):</label>
-            <input type="text" id="baseFolderPathInput" placeholder="C:\Caminho\Para\Sua\Pasta" value="">
-            <span class="base-path-tip">Cole o caminho da sua pasta uma única vez para abrir direto no VLC sem baixar nada!</span>
-          </div>
-
-          <div class="picker-actions">
-            <button id="btnOpenVlc" class="btn btn-primary btn-lg" style="background: linear-gradient(135deg, #f97316, #ea580c); box-shadow: 0 4px 14px rgba(249, 115, 22, 0.4);">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              <span>Abrir no VLC (Sem Baixar)</span>
-            </button>
-
-            <button id="btnOpenWinRun" class="btn btn-secondary btn-lg">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              <span>Copiar Comando para Executar no Windows (Win + R)</span>
-            </button>
-
-            <button id="btnNativeNext" class="btn btn-secondary btn-lg btn-accent-glow">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
-              <span>Sortear Outro Vídeo (Tecla N)</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Video Player Wrapper (Web Player) -->
-      <section id="playerWrapper" class="player-wrapper hidden">
+      <!-- Cartão Principal do Vídeo Sorteado -->
+      <section id="pickerStage" class="picker-stage hidden">
         
-        <!-- Video Element Container -->
-        <div class="video-container" id="videoContainer">
-          <video id="mainVideo" preload="auto" playsinline></video>
-
-          <!-- Toast Overlay -->
-          <div id="toastNotification" class="toast-overlay hidden">
-            <span id="toastIcon"></span>
-            <span id="toastText"></span>
-          </div>
-
-          <!-- Video Information Header Overlay -->
-          <div class="video-info-overlay" id="videoInfoOverlay">
-            <div class="video-title-wrap">
-              <span class="video-path-badge" id="videoFolderPath">Subpasta</span>
-              <h1 class="video-filename" id="videoFileName">Nome do Vídeo.mp4</h1>
-            </div>
-            <div class="video-info-right">
-              <div class="video-index-badge" id="videoIndexBadge">0 / 0</div>
-            </div>
-          </div>
-
-          <!-- Big Play Pause Click Target -->
-          <div class="big-play-target" id="bigPlayTarget"></div>
-
-          <!-- Custom Player Control Bar -->
-          <div class="controls-overlay" id="controlsOverlay">
-            
-            <!-- Progress Bar Slider -->
-            <div class="progress-bar-container" id="progressBarContainer">
-              <div class="progress-buffered" id="progressBuffered"></div>
-              <div class="progress-filled" id="progressFilled"></div>
-              <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1" class="seek-slider">
-              <div class="time-tooltip" id="timeTooltip">00:00</div>
-            </div>
-
-            <!-- Control Buttons Row -->
-            <div class="controls-row">
-              
-              <!-- Left Controls -->
-              <div class="controls-group left-controls">
-                
-                <button id="btnPrevVideo" class="control-btn" title="Vídeo Anterior (Tecla P)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
-                </button>
-
-                <button id="btnRewind5" class="control-btn" title="Voltar 5 segundos (Seta Esquerda)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
-                  <span class="btn-subtext">-5s</span>
-                </button>
-
-                <button id="btnPlayPause" class="control-btn control-btn-main" title="Reproduzir / Pausar (Espaço)">
-                  <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                  <svg id="iconPause" class="hidden" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-                </button>
-
-                <button id="btnForward5" class="control-btn" title="Avançar 5 segundos (Seta Direita)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
-                  <span class="btn-subtext">+5s</span>
-                </button>
-
-                <button id="btnNextVideo" class="control-btn control-btn-accent" title="Próximo Vídeo Aleatório (Tecla N)">
-                  <span>Próximo</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
-                </button>
-
-                <div class="time-display">
-                  <span id="currentTimeDisplay">00:00</span> / <span id="durationDisplay">00:00</span>
-                </div>
-              </div>
-
-              <!-- Right Controls -->
-              <div class="controls-group right-controls">
-
-                <button id="btnShuffleMode" class="control-btn active" title="Alternar Sem Repetição">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
-                </button>
-
-                <button id="btnAutoNext" class="control-btn active" title="Auto-Avançar ao terminar vídeo">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon><path d="M19 19v-6"></path></svg>
-                </button>
-
-                <div class="volume-container">
-                  <button id="btnMute" class="control-btn" title="Mutar / Desmutar (Tecla M)">
-                    <svg id="iconVolHigh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-                    <svg id="iconVolMute" class="hidden" viewBox="0 0 24 24" fill="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" stroke-width="2"></line><line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" stroke-width="2"></line></svg>
-                  </button>
-                  <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" class="volume-slider">
-                </div>
-
-                <select id="speedSelector" class="speed-selector" title="Velocidade de Reprodução">
-                  <option value="0.5">0.5x</option>
-                  <option value="0.75">0.75x</option>
-                  <option value="1" selected>1.0x</option>
-                  <option value="1.25">1.25x</option>
-                  <option value="1.5">1.5x</option>
-                  <option value="2">2.0x</option>
-                </select>
-
-                <button id="btnFullscreen" class="control-btn" title="Tela Cheia (Tecla F)">
-                  <svg id="iconExpand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-                  <svg id="iconCompress" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
-                </button>
-
-              </div>
-            </div>
-
-          </div>
+        <!-- Toast Overlay -->
+        <div id="toastNotification" class="toast-overlay hidden">
+          <span id="toastIcon"></span>
+          <span id="toastText"></span>
         </div>
 
+        <div class="draw-card">
+          <div class="draw-card-top">
+            <span class="draw-badge">🎲 VÍDEO SORTEADO</span>
+            <span class="draw-index" id="drawIndexBadge">0 / 0</span>
+          </div>
+
+          <div class="draw-info">
+            <span class="draw-folder-path" id="drawFolderPath">Subpasta</span>
+            <h1 class="draw-filename" id="drawFileName">NomeDoArquivo.mp4</h1>
+            <div class="draw-meta-tags">
+              <span class="meta-tag" id="drawFileSize">0 MB</span>
+              <span class="meta-tag" id="drawFileExt">MP4</span>
+            </div>
+          </div>
+
+          <div class="draw-main-action">
+            <button id="btnNextDraw" class="btn btn-draw-huge" title="Sortear Próximo Vídeo (Tecla N ou Espaço)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+              <span>SORTEAR PRÓXIMO VÍDEO</span>
+              <kbd class="draw-kbd-hint">Tecla N / Espaço</kbd>
+            </button>
+          </div>
+
+          <div class="draw-sub-actions">
+            <button id="btnCopyName" class="btn btn-secondary btn-lg" title="Copiar apenas o nome do arquivo para colar no seu PC">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copiar Nome do Arquivo</span>
+            </button>
+
+            <button id="btnCopyFullPath" class="btn btn-secondary btn-lg" title="Copiar caminho da subpasta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              <span>Copiar Caminho da Pasta</span>
+            </button>
+
+            <button id="btnPrevDraw" class="btn btn-secondary btn-lg" title="Voltar ao Vídeo Anterior (Tecla P)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+              <span>Vídeo Anterior (Tecla P)</span>
+            </button>
+          </div>
+
+          <div class="draw-footer">
+            <button id="btnToggleShuffle" class="btn-text-toggle active">
+              <span>Sem Repetição: <strong id="shuffleStatusText">Ativado</strong></span>
+            </button>
+          </div>
+        </div>
       </section>
 
     </main>
@@ -251,21 +154,15 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="shortcut-row"><kbd>Espaço</kbd> / <kbd>K</kbd><span>Play / Pause</span></div>
-          <div class="shortcut-row"><kbd>Seta Esquerda (←)</kbd> / <kbd>J</kbd><span>Voltar 5s</span></div>
-          <div class="shortcut-row"><kbd>Seta Direita (→)</kbd> / <kbd>L</kbd><span>Avançar 5s</span></div>
-          <div class="shortcut-row"><kbd>N</kbd><span>Próximo Vídeo Aleatório</span></div>
+          <div class="shortcut-row"><kbd>Espaço</kbd> / <kbd>N</kbd><span>Sortear Próximo Vídeo</span></div>
           <div class="shortcut-row"><kbd>P</kbd><span>Vídeo Anterior no Histórico</span></div>
-          <div class="shortcut-row"><kbd>F</kbd><span>Tela Cheia</span></div>
-          <div class="shortcut-row"><kbd>M</kbd><span>Mutar / Desmutar</span></div>
-          <div class="shortcut-row"><kbd>Seta Cima / Baixo</kbd><span>Ajustar Volume</span></div>
+          <div class="shortcut-row"><kbd>C</kbd><span>Copiar Nome do Arquivo</span></div>
         </div>
       </div>
     </div>
 
   </div>
 
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
